@@ -22,25 +22,41 @@
 
   services.resolved.enable = true;
 
+  services.udev.extraRules = ''
+    # blacklist for usb autosuspend
+    # BT.
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="8087", ATTR{idProduct}=="0032", GOTO="power_usb_rules_end"
+    # LTE.
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="2c7c", ATTR{idProduct}=="0125", GOTO="power_usb_rules_end"
+
+    ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="auto"
+    LABEL="power_usb_rules_end"
+  '';
+
   # Set your time zone.
   time.timeZone = "Europe/Warsaw";
 
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
   i18n.extraLocaleSettings = {
-    LC_ADDRESS = "pl_PL.UTF-8";
+    LC_ADDRESS        = "pl_PL.UTF-8";
     LC_IDENTIFICATION = "pl_PL.UTF-8";
-    LC_MEASUREMENT = "pl_PL.UTF-8";
-    LC_MONETARY = "pl_PL.UTF-8";
-    LC_NAME = "pl_PL.UTF-8";
-    LC_NUMERIC = "pl_PL.UTF-8";
-    LC_PAPER = "pl_PL.UTF-8";
-    LC_TELEPHONE = "pl_PL.UTF-8";
-    LC_TIME = "pl_PL.UTF-8";
+    LC_MEASUREMENT    = "pl_PL.UTF-8";
+    LC_MONETARY       = "pl_PL.UTF-8";
+    LC_NAME           = "pl_PL.UTF-8";
+    LC_NUMERIC        = "pl_PL.UTF-8";
+    LC_PAPER          = "pl_PL.UTF-8";
+    LC_TELEPHONE      = "pl_PL.UTF-8";
+    LC_TIME           = "pl_PL.UTF-8";
   };
 
   # Configure console keymap
-  console.keyMap = "pl2";
+  console = {
+    earlySetup = true;
+    font = "${pkgs.terminus_font}/share/consolefonts/ter-132n.psf.gz";
+    packages = with pkgs; [ terminus_font ];
+    keyMap = "pl2";
+  };
 
   # Enable the X11 windowing system.
   services.xserver.enable = true;
@@ -48,6 +64,13 @@
 
   # Enable the Plasma 5 Desktop Environment.
   services.xserver.displayManager.sddm.enable = true;
+  services.xserver.displayManager.sddm.settings = {
+    Wayland = {
+      DisplayServer = "wayland";
+      CompositorCommand = "kwin_wayland --no-lockscreen";
+    };
+  };
+
   services.xserver.desktopManager.plasma5.enable = true;
 
   services.xserver.displayManager.defaultSession = "plasmawayland";
@@ -93,6 +116,7 @@
     description = "Green";
     isNormalUser = true;
     extraGroups = [ "networkmanager" "wheel" ];
+    shell = pkgs.fish;
   };
 
   services.ananicy = {
@@ -112,20 +136,34 @@
 
   services.power-profiles-daemon.enable = false;
   services.tlp.enable = true;
+  services.tlp.settings = {
+    START_CHARGE_THRESH_BAT0 = 75; # DOESNT WORK ON GPD???
+    STOP_CHARGE_THRESH_BAT0  = 80;  # DOESNT WORK ON GPD???
+
+    USB_AUTOSUSPEND  = 0;
+    USB_EXCLUDE_WWAN = 1;
+  };
+
+  programs.kdeconnect.enable = true;
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     libsForQt5.yakuake tldr
-    vim nano kate
+    usbutils pciutils
+    bluez bluez-tools libsForQt5.bluedevil libsForQt5.bluez-qt
+    vim nano kate bat
     wget curl git nmap
-    firefox
+    firefox speechd
     htop neofetch filelight ark partition-manager
     krita aseprite-unfree shotcut obs-studio
     vlc mpv gwenview songrec
     jetbrains.rider
     lutris protonup-qt protontricks winePackages.waylandFull
   ];
+
+  programs.firefox.languagePacks = [ "en-US" "pl" ];
+  nixpkgs.config.firefox.speechSynthesisSupport = true;
 
   nixpkgs.config.permittedInsecurePackages = [
     "python-2.7.18.6"
