@@ -31,6 +31,9 @@
 
     ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="auto"
     LABEL="power_usb_rules_end"
+
+    # Xopero Mouse
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c077", ATTR{power/autosuspend}="-1"
   '';
 
   # Set your time zone.
@@ -50,6 +53,8 @@
     LC_TIME           = "pl_PL.UTF-8";
   };
 
+  fonts.fontconfig.defaultFonts.monospace = [ "JetBrains Mono" ];
+
   # Configure console keymap
   console = {
     earlySetup = true;
@@ -66,7 +71,7 @@
   services.xserver.displayManager.sddm.enable = true;
   services.xserver.displayManager.sddm.settings = {
     Wayland = {
-      DisplayServer = "wayland";
+      DisplayServer = "wayland"; # TODO: fix this part of config
       CompositorCommand = "kwin_wayland --no-lockscreen";
     };
   };
@@ -78,7 +83,7 @@
   programs.dconf.enable = true;
 
   environment.sessionVariables = {
-     MOZ_ENABLE_WAYLAND = "1";
+    MOZ_ENABLE_WAYLAND = "1";
   };
 
   xdg.portal.enable = true;
@@ -119,6 +124,11 @@
     shell = pkgs.fish;
   };
 
+  security.pam.services.kdewallet = {
+    name = "kdewallet";
+    enableKwallet = true;
+  };
+
   services.ananicy = {
     enable = true;
     package = pkgs.ananicy-cpp;
@@ -126,6 +136,7 @@
 
   programs.fish = {
     enable = true;
+    shellInit = "ssh-add $HOME/.keys/gwm9";
   };
 
   programs.xwayland.enable = true;
@@ -146,21 +157,29 @@
 
   programs.kdeconnect.enable = true;
 
+  programs.npm.enable = true;
+
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     libsForQt5.yakuake tldr
     usbutils pciutils
     bluez bluez-tools libsForQt5.bluedevil libsForQt5.bluez-qt
-    vim nano kate bat
-    wget curl git nmap
+    lightly-boehs
+    vim nano kate bat nodejs
+    wget curl git nmap libsForQt5.ksshaskpass
+    socat libqmi uqmi
     firefox speechd
     htop neofetch filelight ark partition-manager
     krita aseprite-unfree shotcut obs-studio
     vlc mpv gwenview songrec
-    jetbrains.rider
+    jetbrains.rider mono dotnet-sdk jetbrains.datagrip
     lutris protonup-qt protontricks winePackages.waylandFull
   ];
+
+  programs = {
+    ssh.startAgent = true;
+  };
 
   programs.firefox.languagePacks = [ "en-US" "pl" ];
   nixpkgs.config.firefox.speechSynthesisSupport = true;
