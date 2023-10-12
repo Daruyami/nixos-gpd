@@ -163,7 +163,7 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     libsForQt5.yakuake tldr
-    usbutils pciutils
+    usbutils pciutils fwupd clinfo glxinfo vulkan-tools wayland-utils
     bluez bluez-tools libsForQt5.bluedevil libsForQt5.bluez-qt
     lightly-boehs
     vim nano kate bat nodejs
@@ -172,8 +172,10 @@
     firefox speechd
     htop neofetch filelight ark partition-manager
     krita aseprite-unfree shotcut obs-studio
-    vlc mpv gwenview songrec
+    vlc mpv gwenview songrec pavucontrol
     jetbrains.rider mono dotnet-sdk jetbrains.datagrip
+    libGL libGLU egl-wayland libglvnd
+    openvpn keepass remmina opensnitch-ui
     lutris protonup-qt protontricks winePackages.waylandFull
   ];
 
@@ -209,7 +211,36 @@
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
-  networking.firewall.enable = false;
+  # networking.firewall.enable = false;
+  services.opensnitch = {
+    enable = true;
+    rules = {
+      systemd-timesyncd = {
+        name = "systemd-timesyncd";
+        enabled = true;
+        action = "allow";
+        duration = "always";
+        operator = {
+          type ="simple";
+          sensitive = false;
+          operand = "process.path";
+          data = "${pkgs.systemd}/lib/systemd/systemd-timesyncd";
+        };
+      };
+      systemd-resolved = {
+        name = "systemd-resolved";
+        enabled = true;
+        action = "allow";
+        duration = "always";
+        operator = {
+          type ="simple";
+          sensitive = false;
+          operand = "process.path";
+          data = "${pkgs.systemd}/lib/systemd/systemd-resolved";
+        };
+      };
+    };
+  };
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
