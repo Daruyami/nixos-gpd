@@ -2,8 +2,55 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running `nixos-help`).
 
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
+let
+  userPkgs = pkgs: with pkgs; [
+    # CLI utils, services, daemons, stuff
+    tldr vim nano bat file
+    usbutils pciutils fwupd clinfo glxinfo vulkan-tools wayland-utils
+    wget curl git nmap
+    socat libqmi uqmi
+    htop neofetch
+    speechd nodejs
+    mesa libdrm xorg.xf86videoamdgpu
+
+    # Bluetooth
+    bluez bluez-tools libsForQt5.bluedevil libsForQt5.bluez-qt
+
+    # GUI Apps
+    libsForQt5.ksshaskpass
+    libsForQt5.yakuake kate firefox
+    filelight ark partition-manager
+    krita aseprite-unfree shotcut obs-studio
+    vlc mpv gwenview songrec pavucontrol
+    jetbrains.rider mono dotnet-sdk jetbrains.datagrip
+    openvpn keepass remmina opensnitch-ui
+    lutris protonup-qt protontricks winePackages.waylandFull
+    lact
+
+    # KDE Plasma customization
+    lightly-boehs
+  ];
+  desktopPkgs = pkgs: with pkgs; [
+    lsb-release pciutils xorg.xrandr which perl xdg-utils iana-etc python3 procps usbutils xdg-user-dirs mesa sqlite
+    xorg.libXcomposite xorg.libXtst xorg.libXrandr xorg.libXext xorg.libX11 xorg.libXfixes libGL libva pipewire.lib
+    harfbuzz libthai pango lsof file mesa.llvmPackages.llvm.lib vulkan-loader
+    expat wayland xorg.libxcb xorg.libXdamage xorg.libxshmfence xorg.libXxf86vm libelf (lib.getLib elfutils)
+    xorg.libXinerama xorg.libXcursor xorg.libXrender xorg.libXScrnSaver xorg.libXi xorg.libSM xorg.libICE
+    gnome2.GConf curlWithGnuTls nspr nss cups libcap SDL2 libusb1 dbus-glib gsettings-desktop-schemas ffmpeg libudev0-shim
+    fontconfig freetype xorg.libXt xorg.libXmu libogg libvorbis SDL SDL2_image glew110 libdrm libidn tbb zlib
+    udev dbus
+    glib gtk2 bzip2 flac freeglut libjpeg
+    libpng libpng12 libsamplerate libmikmod libtheora libtiff pixman speex SDL_image SDL_ttf SDL_mixer SDL2_ttf SDL2_mixer
+    libappindicator-gtk2 libdbusmenu-gtk2 libindicator-gtk2 libcaca libcanberra libgcrypt libvpx librsvg xorg.libXft libvdpau
+    attr
+    at-spi2-atk at-spi2-core gst_all_1.gstreamer gst_all_1.gst-plugins-ugly gst_all_1.gst-plugins-base json-glib
+    libdrm libxkbcommon libvorbis libxcrypt mono ncurses openssl xorg.xkeyboardconfig xorg.libpciaccess xorg.libXScrnSaver
+    icu gtk3 zlib atk cairo freetype gdk-pixbuf fontconfig libGLU libuuid libbsd alsa-lib libidn2 libpsl nghttp2.lib rtmpdump
+    egl-wayland libglvnd
+  ];
+in
 {
   imports =
     [ # Include the results of the hardware scan.
@@ -15,12 +62,29 @@
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix.settings.auto-optimise-store = true;
 
-  networking.hostName = "gwm9"; # Define your hostname.
-  # Pick only one of the below networking options.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
-  networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
+  nix.gc.automatic = true;
+
+  # Copy the NixOS configuration file and link it from the resulting system
+  # (/run/current-system/configuration.nix). This is useful in case you
+  # accidentally delete configuration.nix.
+  system.copySystemConfiguration = true;
+
+  system.stateVersion = "23.05";
+
+
+#######################################################################################################################
+#     Networking                                                                                                      #
+#######################################################################################################################
+
+  networking.hostName = "gwm9";
+  networking.networkmanager.enable = true;
 
   services.resolved.enable = true;
+
+
+#######################################################################################################################
+#     IO                                                                                                              #
+#######################################################################################################################
 
   services.udev.extraRules = ''
     # blacklist for usb autosuspend
@@ -36,10 +100,13 @@
     ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c077", ATTR{power/autosuspend}="-1"
   '';
 
-  # Set your time zone.
+
+#######################################################################################################################
+#     Region, locales, fonts and stuff                                                                                #
+#######################################################################################################################
+
   time.timeZone = "Europe/Warsaw";
 
-  # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
   i18n.extraLocaleSettings = {
     LC_ADDRESS        = "pl_PL.UTF-8";
@@ -54,8 +121,10 @@
   };
 
   fonts.fontconfig.defaultFonts.monospace = [ "JetBrains Mono" ];
+  fonts.packages = with pkgs; [
+    corefonts
+  ];
 
-  # Configure console keymap
   console = {
     earlySetup = true;
     font = "${pkgs.terminus_font}/share/consolefonts/ter-132n.psf.gz";
@@ -63,11 +132,13 @@
     keyMap = "pl2";
   };
 
-  # Enable the X11 windowing system.
+
+#######################################################################################################################
+#     Graphical environment and stuff                                                                                 #
+#######################################################################################################################
+
   services.xserver.enable = true;
 
-
-  # Enable the Plasma 5 Desktop Environment.
   services.xserver.displayManager.sddm.enable = true;
   services.xserver.displayManager.sddm.settings = {
     Wayland = {
@@ -88,40 +159,42 @@
 
   xdg.portal.enable = true;
   
+  hardware.opengl.enable = true;
 
-  # Configure keymap in X11
-  # services.xserver.layout = "us";
-  # services.xserver.xkbOptions = "eurosign:e,caps:escape";
 
-  # Enable CUPS to print documents.
   services.printing.enable = true;
 
-  # Enable sound.
-  # sound.enable = true;
-  # hardware.pulseaudio.enable = true;
-
-  # Remove sound.enable or set it to false if you had it set previously, as sound.enable is only meant for ALSA-based configurations
-
-  # rtkit is optional but recommended
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+#######################################################################################################################
+#     Users                                                                                                           #
+#######################################################################################################################
+
   users.users.green = {
     description = "Green";
     isNormalUser = true;
     extraGroups = [ "networkmanager" "wheel" ];
     shell = pkgs.fish;
+  };
+
+
+#######################################################################################################################
+#     Programs & Services                                                                                             #
+#######################################################################################################################
+
+  environment.systemPackages = userPkgs pkgs ++ desktopPkgs pkgs;
+
+  # Automatically creates a loader in /lib/* to avoid patching stuff
+  programs.nix-ld = {
+    enable = true;
+    libraries = desktopPkgs pkgs;
   };
 
   security.pam.services.kdewallet = {
@@ -141,15 +214,13 @@
 
   programs.xwayland.enable = true;
 
-  nix.gc.automatic = true;
-
   services.netdata.enable = true;
 
   services.power-profiles-daemon.enable = false;
   services.tlp.enable = true;
   services.tlp.settings = {
     START_CHARGE_THRESH_BAT0 = 75; # DOESNT WORK ON GPD???
-    STOP_CHARGE_THRESH_BAT0  = 80;  # DOESNT WORK ON GPD???
+    STOP_CHARGE_THRESH_BAT0  = 80; # DOESNT WORK ON GPD???
 
     USB_AUTOSUSPEND  = 0;
     USB_EXCLUDE_WWAN = 1;
@@ -158,26 +229,6 @@
   programs.kdeconnect.enable = true;
 
   programs.npm.enable = true;
-
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    libsForQt5.yakuake tldr
-    usbutils pciutils fwupd clinfo glxinfo vulkan-tools wayland-utils
-    bluez bluez-tools libsForQt5.bluedevil libsForQt5.bluez-qt
-    lightly-boehs
-    vim nano kate bat nodejs
-    wget curl git nmap libsForQt5.ksshaskpass
-    socat libqmi uqmi
-    firefox speechd
-    htop neofetch filelight ark partition-manager
-    krita aseprite-unfree shotcut obs-studio
-    vlc mpv gwenview songrec pavucontrol
-    jetbrains.rider mono dotnet-sdk jetbrains.datagrip
-    libGL libGLU egl-wayland libglvnd
-    openvpn keepass remmina opensnitch-ui
-    lutris protonup-qt protontricks winePackages.waylandFull
-  ];
 
   programs = {
     ssh.startAgent = true;
@@ -194,24 +245,9 @@
   programs.gamemode.enable = true;
   programs.steam.enable = true;
 
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
-
-  # List services that you want to enable:
-
-  # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
+  # Firewall manager
   services.opensnitch = {
     enable = true;
     rules = {
@@ -242,18 +278,6 @@
     };
   };
 
-  # Copy the NixOS configuration file and link it from the resulting system
-  # (/run/current-system/configuration.nix). This is useful in case you
-  # accidentally delete configuration.nix.
-  system.copySystemConfiguration = true;
-
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It's perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "23.05"; # Did you read the comment?
-
+  # End :)
 }
 
