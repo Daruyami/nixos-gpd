@@ -12,29 +12,37 @@ let
     wget curl git nmap
     socat libqmi uqmi
     htop neofetch
-    speechd nodejs
+    speechd translate-shell
+    nodejs
     mesa libdrm xorg.xf86videoamdgpu
+    xsettingsd
+    crawl
+    nvd
 
     # Bluetooth
     bluez bluez-tools libsForQt5.bluedevil libsForQt5.bluez-qt
 
     # GUI Apps
-    libsForQt5.ksshaskpass
+    libsForQt5.powerdevil
+    libsForQt5.kcalc
     libsForQt5.yakuake kate firefox
     filelight ark partition-manager
-    krita aseprite-unfree shotcut obs-studio
+    krita aseprite-unfree shotcut obs-studio inkscape
+    blockbench-electron
+    maliit-keyboard
     vlc mpv gwenview songrec pavucontrol
-    jetbrains.rider mono dotnet-sdk jetbrains.datagrip
+    jetbrains.rider mono dotnet-sdk jetbrains.datagrip jetbrains.idea-community
     openvpn keepass remmina opensnitch-ui
-    lutris protonup-qt protontricks winePackages.waylandFull
-    lact
+    lutris bottles protonup-qt protontricks winePackages.waylandFull
+    ppsspp-sdl-wayland
+    lact scrcpy
 
     # KDE Plasma customization
     lightly-boehs
   ];
   desktopPkgs = pkgs: with pkgs; [
     lsb-release pciutils xorg.xrandr which perl xdg-utils iana-etc python3 procps usbutils xdg-user-dirs mesa sqlite
-    xorg.libXcomposite xorg.libXtst xorg.libXrandr xorg.libXext xorg.libX11 xorg.libXfixes libGL libva pipewire.lib
+    xorg.libXcomposite xorg.libXtst xorg.libXrandr xorg.libXext xorg.libX11 xorg.libXfixes libGL libva
     harfbuzz libthai pango lsof file mesa.llvmPackages.llvm.lib vulkan-loader
     expat wayland xorg.libxcb xorg.libXdamage xorg.libxshmfence xorg.libXxf86vm libelf (lib.getLib elfutils)
     xorg.libXinerama xorg.libXcursor xorg.libXrender xorg.libXScrnSaver xorg.libXi xorg.libSM xorg.libICE
@@ -71,6 +79,11 @@ in
 
   system.stateVersion = "23.05";
 
+  boot.zfs.forceImportRoot = false;
+  boot.zfs.allowHibernation = true;
+
+  zramSwap.enable = true;
+
 
 #######################################################################################################################
 #     Networking                                                                                                      #
@@ -90,14 +103,16 @@ in
     # blacklist for usb autosuspend
     # BT.
     ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="8087", ATTR{idProduct}=="0032", GOTO="power_usb_rules_end"
+
     # LTE.
     ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="2c7c", ATTR{idProduct}=="0125", GOTO="power_usb_rules_end"
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="2c7c", ATTR{idProduct}=="0125", ATTR{power/autosuspend}="-1"
 
     ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="auto"
     LABEL="power_usb_rules_end"
 
-    # Xopero Mouse
-    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c077", ATTR{power/autosuspend}="-1"
+    # USB mouse
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="3299", ATTR{idProduct}=="000b", ATTR{power/autosuspend}="-1"
   '';
 
 
@@ -122,7 +137,7 @@ in
 
   fonts.fontconfig.defaultFonts.monospace = [ "JetBrains Mono" ];
   fonts.packages = with pkgs; [
-    corefonts
+    corefonts jetbrains-mono
   ];
 
   console = {
@@ -139,12 +154,9 @@ in
 
   services.xserver.enable = true;
 
-  services.xserver.displayManager.sddm.enable = true;
-  services.xserver.displayManager.sddm.settings = {
-    Wayland = {
-      DisplayServer = "wayland"; # TODO: fix this part of config
-      CompositorCommand = "kwin_wayland --no-lockscreen";
-    };
+  services.xserver.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
   };
 
   services.xserver.desktopManager.plasma5.enable = true;
@@ -197,36 +209,37 @@ in
     libraries = desktopPkgs pkgs;
   };
 
-  security.pam.services.kdewallet = {
-    name = "kdewallet";
-    enableKwallet = true;
-  };
-
   services.ananicy = {
     enable = true;
     package = pkgs.ananicy-cpp;
   };
+
+  services.fwupd.enable = true;
 
   programs.fish = {
     enable = true;
     shellInit = "ssh-add $HOME/.keys/gwm9";
   };
 
+  programs.thefuck.enable = true;
+
   programs.xwayland.enable = true;
 
   services.netdata.enable = true;
 
-  services.power-profiles-daemon.enable = false;
-  services.tlp.enable = true;
+  services.power-profiles-daemon.enable = true;
+  /*services.tlp.enable = true;
   services.tlp.settings = {
     START_CHARGE_THRESH_BAT0 = 75; # DOESNT WORK ON GPD???
     STOP_CHARGE_THRESH_BAT0  = 80; # DOESNT WORK ON GPD???
 
     USB_AUTOSUSPEND  = 0;
     USB_EXCLUDE_WWAN = 1;
-  };
+  };*/
 
   programs.kdeconnect.enable = true;
+
+  programs.adb.enable = true;
 
   programs.npm.enable = true;
 
@@ -239,8 +252,10 @@ in
 
   nixpkgs.config.permittedInsecurePackages = [
     "python-2.7.18.6"
+    "electron-25.9.0"
   ];
 
+  programs.partition-manager.enable = true;
 
   programs.gamemode.enable = true;
   programs.steam.enable = true;
